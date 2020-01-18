@@ -58,4 +58,7 @@ in a format that is readable with the Kaldi-Toolkit [@Povey2011TheKS].
 Apart from third-party formats, there is an audiomate-specific format as well.
 This is intended to store data, that is used with audiomate at some other point.
 
+# Acknowledgements
+Parts of audiomate were developed during the project Keyword Spider (KWS) funded by INNOSUISSE (26567.1 PFES-ES).
+
 # References
