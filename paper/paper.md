@@ -28,7 +28,7 @@ Audiomate aims to reduce the effort for preparation of audio datasets,
 by providing a consistent way to work with them.
 
 Audio datasets have various formats, almost every single dataset has it's own format.
-So everytime a new dataset is used, a piece of code has to be written to load and parse the data.
+So every time a new dataset is used, a piece of code has to be written to load and parse the data.
 Having the data loaded, often some kind of preprocessing is necessary.
 Finally, if the data is intended to be used with some kind of machine learning toolkit,
 it has to be saved in another specific format.
@@ -73,11 +73,11 @@ With audiomate, we can loaded both datasets with a single line of code.
 Furthermore, we can merge them to a single set.
 In order to test our model, we also can split the data into two subsets with audiomate.
 Without knowing how the audio is stored on the filesystem,
-we can load the samples and labels just by iterating over all utterances.
+we can load the samples and labels just by iterating over all utterances or using a method to load the samples in batches.
 
 # Implementation
 Audiomate is implemented with the goal to make it simple to add new data formats.
-A new format can be added by implementing any of three abstract interfaces.
+A new format can be added by implementing one or more of three available abstract interfaces.
 
 * Reader: A reader defines the procedure to load data from a specific format.
           It stores the data in a universal data structure.
