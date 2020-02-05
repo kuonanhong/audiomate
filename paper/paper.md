@@ -14,58 +14,71 @@ authors:
     - name: Andreas Ahlenstorf
       affiliation: 1
 affiliations:
-    - name: ZHAW, Winterthur, Switzerland
+    - name: ZHAW Zurich University of Applied Sciences, Winterthur, Switzerland
       index: 1
 date: 20 December 2019
 bibliography: paper.bib
 ---
 
 # Summary
-Machine Learning has a variety of applications in different fields,
-including audio-related tasks. But especially with deep learning the need for data has been increased dramatically.
-Therefore data has to be prepared carefully before the actual problem can be tackled.
-Audiomate aims to reduce the effort for the preparation of audio datasets,
-by providing a consistent way to work with them.
 
-Almost every single audio dataset has its own format.
-So every time a new dataset is used, a piece of code has to be written to load and parse the data.
-Having the data loaded, often some kind of preprocessing is necessary.
-Finally, if the data is intended to be used with a machine learning toolkit,
-it has to be saved in another specific format.
+Machine learning tasks in the audio domain frequently require large datasets with training data.
+Over the last years, numerous datasets have been made available for various purposes, for example, [@musan2015] and [@ardila2019common].
+Unfortunately, most of the datasets are stored in widely differing formats.
+As a consequence, machine learning practitioners have to convert datasets into other formats before they can be used or combined.
+Furthermore, common tasks like reading, partitioning, or shuffling of datasets have to be developed over and over again for each format and require intimate knowledge of the formats.
+We purpose Audiomate, a Python toolkit, to solve this problem.
 
-Audiomate is designed to help with all those problems.
-It provides a uniform way to work with the data without knowing specific details about the file-system
-representation of the data.
-This way datasets of different formats can be loaded and used in the same way.
-Furthermore, the data can be stored in different ways.
-For example, a machine learning toolkit like Kaldi [@Povey2011TheKS] requires a specific format.
-Audiomate automatically exports the data in the correct format,
-without the user having to know how that format looks like.
-Apart from reading and writing data,
-audiomate also provides tools to work with the loaded data including:
+Audiomate provides a uniform programming interface to work with numerous datasets.
+Knowledge about the structure or on-disk format of the datasets is not necessary.
+Audiomate facilitates and simplifies a wide range of tasks:
 
-* Access all meta-data, like speakers, labels
-* Read audio data (single files, batches of files)
-* Retrieve information about the data (e.g. amount of speakers, total duration, ...)
-* Merge data of multiple datasets (e.g. Combine two speech datasets)
-* Split data into smaller subsets (e.g. Create train/dev/test splits with a reasonable distribution of classes)
-* Validate data for specific requirements (e.g Check if all samples have assigned a label)
+* Reading and writing of numerous dataset formats using a uniform programming interface, for example [@musan2015], [@Panayotov2015LibrispeechAA] and [@ardila2019common]
+* Accessing metadata, like speaker information and labels
+* Reading audio data (single files, batches of files)
+* Retrieval of information about the data (e.g., number of speakers, total duration).
+* Merging of multiple datasets (e.g., combine two speech datasets).
+* Splitting data into smaller subsets (e.g., create training, validation, and test sets with a reasonable distribution of classes).
+* Validation of data for specific requirements (e.g., check whether all samples were assigned a label)
 
-# Use cases
-Audiomate can be used for a variety of use cases.
-Two of them are described here to show possible scenarios where the usage of audiomate might be helpful.
+# Use Cases
 
-## Training ASR Model with Mozilla's DeepSpeech
-For training an automatic speech recognition model, for example Mozilla's implementation of DeepSpeech
-(https://github.com/mozilla/DeepSpeech) can be used.
-In order to do that, we first need to convert our dataset to the format of the DeepSpeech implementation.
+To illustrate Audiomate's capabilities, we present two typical applications where Audiomate significantly simplifies the task of a developer: Training a speech recognition model with Mozilla's implementation of DeepSpeech and training a deep neural network to recognize music.
+
+## Training an Automatic Speech Recognition Model
+
+In this example, we use Mozilla's implementation (https://github.com/mozilla/DeepSpeech) of DeepSpeech [@deepspeech] to train an automatic speech recognition model.
+To do so, we use the LibriSpeech dataset [@Panayotov2015LibrispeechAA].
+The first step is to convert the dataset into the csv-format expected by DeepSpeech (@@Link? There is no link afaik, just reverse engineering their code).
 Using audiomate, we can load the given dataset and store it in the format of DeepSpeech.
 Of course, it requires audiomate to have the specific reader and writer.
 But, once having them, they can be used in many ways.
 Assume, we decide to change to Kaldi instead of DeepSpeech,
 we just change one line to use another audiomate writer that stores the data in Kaldi's format.
 
-## Training a Neural Network recognizing Music
+```python
+import audiomate
+from audiomate.corpus import io
+
+downloader = io.LibriSpeechDownloader()
+downloader.download('/local/data/librispeech')
+
+# librispeech = audiomate.Corpus.load('/local/data/librispeech', reader='librispeech')
+reader = io.LibriSpeechReader()
+librispeech = reader.load('/local/data/librispeech')
+
+# Save in format of deepspeech
+# librispeech.save_at('/local/data/librispeech_ds', writer='mozilla-deepspeech')
+writer = io.MozillaDeepSpeechWriter()
+writer.save(librispeech, '/local/data/librispeech_ds')
+
+# Or with kaldi
+# librispeech.save_at('/local/data/librispeech_kaldi', writer='kaldi')
+writer = io.KaldiWriter()
+writer.save(librispeech, '/local/data/librispeech_kaldi')
+```
+
+## Training a Neural Network Recognizing Music
 We want to train a neural network detecting segments in an audio stream that contains music.
 To do so, we intend to use the MUSAN dataset [@musan2015] and the GTZAN dataset [@GTZAN].
 For training the DNN, we use for example PyTorch (https://pytorch.org/).
@@ -74,6 +87,33 @@ Furthermore, we can merge them to a single set.
 In order to test our model, we also can split the data into two subsets with audiomate.
 Without knowing how the audio is stored on the filesystem,
 we can load the samples and labels just by iterating over all utterances or using a method to load the samples in batches.
+
+```python
+import audiomate
+from audiomate.corpus import io
+from audiomate.corpus import subset
+
+musan_dl = io.MusanDownloader()
+musan_dl.download('/local/data/musan')
+
+gtzan_dl = io.GtzanDownloader()
+gtzan_dl.download('/local/data/gtzan')
+
+musan = audiomate.Corpus.load('/local/data/musan', reader='musan')
+gtzan = audiomate.Corpus.load('/local/data/gtzan', reader='gtzan')
+
+full = audiomate.Corpus.merge_corpora([musan, gtzan])
+
+splitter = subset.Splitter(full, random_seed=222)
+subviews = splitter.split(proportions={
+    'train': 0.8,
+    'test': 0.2,
+})
+
+for utterance in subviews['train'].utterances.values():
+    samples = utterance.read_samples()
+    labels = utterance.label_lists[audiomate.corpus.LL_DOMAIN]
+```
 
 # Implementation
 Audiomate is implemented with the goal to make it simple to add new data formats.
